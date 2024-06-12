@@ -1,4 +1,4 @@
-package main
+package ecoflow
 
 type DeviceListResponse struct {
 	Code            string       `json:"code"`
