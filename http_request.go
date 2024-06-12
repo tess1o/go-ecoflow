@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,45 +23,47 @@ const (
 )
 
 type HttpRequest struct {
-	Method            string
-	URI               string
-	RequestParameters map[string]interface{}
+	httpClient        *http.Client
+	method            string
+	uri               string
+	requestParameters map[string]interface{}
 	accessKey         string
 	secretKey         string
 }
 
-func NewHttpRequest(method string, uri string, params map[string]interface{}, accessKey, secretKey string) *HttpRequest {
+func NewHttpRequest(httpClient *http.Client, method string, uri string, params map[string]interface{}, accessKey, secretKey string) *HttpRequest {
 	return &HttpRequest{
-		Method:            method,
-		URI:               uri,
-		RequestParameters: params,
+		httpClient:        httpClient,
+		method:            method,
+		uri:               uri,
+		requestParameters: params,
 		accessKey:         accessKey,
 		secretKey:         secretKey,
 	}
 }
 
-func (r *HttpRequest) Execute() ([]byte, error) {
+func (r *HttpRequest) Execute(ctx context.Context) ([]byte, error) {
 	signParams := r.getSignParameters()
-	requestURI := r.URI + "?" + signParams.queryParams
+	requestURI := r.uri + "?" + signParams.queryParams
 
 	var reqBody bytes.Buffer
 
-	if r.RequestParameters != nil {
-		reqBytes, _ := json.Marshal(r.RequestParameters)
+	if r.requestParameters != nil {
+		reqBytes, _ := json.Marshal(r.requestParameters)
 		reqBody.Write(reqBytes)
 	}
 
 	var httpReq *http.Request
 	var err error
 
-	switch r.Method {
+	switch r.method {
 	case http.MethodGet:
-		httpReq, err = http.NewRequest(http.MethodGet, requestURI, nil)
+		httpReq, err = http.NewRequestWithContext(ctx, http.MethodGet, requestURI, nil)
 		if err != nil {
 			return nil, err
 		}
 	case http.MethodPost:
-		httpReq, err = http.NewRequest(http.MethodPost, r.URI, &reqBody)
+		httpReq, err = http.NewRequestWithContext(ctx, http.MethodPost, r.uri, &reqBody)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +75,10 @@ func (r *HttpRequest) Execute() ([]byte, error) {
 	httpReq.Header.Add(timestampHeader, signParams.timestamp)
 	httpReq.Header.Add(signHeader, signParams.sign)
 
-	client := http.Client{}
+	client := r.httpClient
+	if client == nil {
+		client = &http.Client{}
+	}
 
 	resp, err := client.Do(httpReq)
 	if err != nil {
@@ -95,7 +101,7 @@ type signParameters struct {
 func (r *HttpRequest) getSignParameters() *signParameters {
 	nonce := generateNonce()
 	timestamp := generateTimestamp()
-	queryParams := generateQueryParams(r.RequestParameters)
+	queryParams := generateQueryParams(r.requestParameters)
 	return &signParameters{
 		queryParams: queryParams,
 		nonce:       nonce,
