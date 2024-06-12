@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -29,10 +30,11 @@ type HttpRequest struct {
 	requestParameters map[string]interface{}
 	accessKey         string
 	secretKey         string
+	getSignParameters func() *signParameters //required for unit testing
 }
 
 func NewHttpRequest(httpClient *http.Client, method string, uri string, params map[string]interface{}, accessKey, secretKey string) *HttpRequest {
-	return &HttpRequest{
+	r := &HttpRequest{
 		httpClient:        httpClient,
 		method:            method,
 		uri:               uri,
@@ -40,6 +42,13 @@ func NewHttpRequest(httpClient *http.Client, method string, uri string, params m
 		accessKey:         accessKey,
 		secretKey:         secretKey,
 	}
+
+	//required for unit testing
+	r.getSignParameters = func() *signParameters {
+		return r.generateSignParameters()
+	}
+
+	return r
 }
 
 func (r *HttpRequest) Execute(ctx context.Context) ([]byte, error) {
@@ -68,6 +77,9 @@ func (r *HttpRequest) Execute(ctx context.Context) ([]byte, error) {
 			return nil, err
 		}
 		httpReq.Header.Add("Content-Type", "application/json;charset=UTF-8")
+	default:
+		slog.Error("Only POST and GET methods are supported so far")
+		return nil, errors.New("unsupported http method")
 	}
 
 	httpReq.Header.Add(accessKeyHeader, r.accessKey)
@@ -86,7 +98,6 @@ func (r *HttpRequest) Execute(ctx context.Context) ([]byte, error) {
 	} else if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(fmt.Sprintf("response status is failed|url=%s, statusCode=%s", requestURI, resp.Status))
 	}
-
 	return io.ReadAll(resp.Body)
 }
 
@@ -98,7 +109,7 @@ type signParameters struct {
 	queryParams string
 }
 
-func (r *HttpRequest) getSignParameters() *signParameters {
+func (r *HttpRequest) generateSignParameters() *signParameters {
 	nonce := generateNonce()
 	timestamp := generateTimestamp()
 	queryParams := generateQueryParams(r.requestParameters)
@@ -144,20 +155,46 @@ func (r *HttpRequest) getKeyValueString(queryString string, nonce string, timest
 // Step 2: if the type is nested, expand and splice according to the method of step 1.
 // E.g. deviceInfo.id=1&deviceList[0].id=1&deviceList[1].id=2&ids[0]=1&ids[1]=2&ids[2]=3&name=demo1
 // See step 1 and step 2 here: https://developer-eu.ecoflow.com/us/document/generalInfo
-func generateQueryParams(requestParams map[string]interface{}) string {
-	sortKeyValueMap := requestParams
-	keys := make([]string, 0, len(sortKeyValueMap))
-	for k := range sortKeyValueMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+func generateQueryParams(data map[string]interface{}) string {
+	var result []string
 
-	queryString := ""
-	for _, k := range keys {
-		queryString += k + "=" + fmt.Sprint(sortKeyValueMap[k]) + "&"
+	// Process top-level map keys
+	for k, v := range data {
+		result = append(result, processValue(k, v)...)
 	}
-	queryString = strings.TrimRight(queryString, "&")
-	return queryString
+
+	// Sort results by ASCII value
+	sort.Strings(result)
+
+	// Concatenate results with & separator
+	return strings.Join(result, "&")
+}
+
+func processValue(prefix string, value interface{}) []string {
+	var result []string
+	switch v := value.(type) {
+	case map[string]interface{}:
+		for k, nestedValue := range v {
+			// Recursively process nested maps
+			nestedPrefix := prefix + "." + k
+			result = append(result, processValue(nestedPrefix, nestedValue)...)
+		}
+	case []interface{}:
+		for i, item := range v {
+			// Recursively process items in arrays
+			nestedPrefix := prefix + "[" + strconv.Itoa(i) + "]"
+			result = append(result, processValue(nestedPrefix, item)...)
+		}
+	case string:
+		result = append(result, prefix+"="+v)
+	case int:
+		result = append(result, prefix+"="+strconv.Itoa(v))
+	case float64:
+		result = append(result, prefix+"="+strconv.FormatFloat(v, 'f', -1, 64))
+	case bool:
+		result = append(result, prefix+"="+strconv.FormatBool(v))
+	}
+	return result
 }
 
 // timestamp is a UTC timestamp (in nano)
