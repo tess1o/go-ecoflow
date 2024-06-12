@@ -1,7 +1,7 @@
 Partial implementation of Ecoflow Rest API that allows to get list of devices and their parameters (quotas).
 
-Link to official documentation: https://developer-eu.ecoflow.com/us/document/introduction
-Response mapping: [here](docs/fields_mapping.md.md)
+Link to official documentation: https://developer-eu.ecoflow.com/us/document/introduction \
+Response mapping: [here](docs/fields_mapping.md)
 Usage example:
 
 ```go
