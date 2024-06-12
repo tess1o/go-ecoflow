@@ -111,12 +111,22 @@ func (r *HttpRequest) getSignParameters() *signParameters {
 	}
 }
 
+// Step 4: encrypt
+// E.g. byte[] signBytes = HMAC-SHA256(str, secretKey)
+// Step 5: convert byte[] to hexadecimal string. String sign = bytesToHexString(signBytes)
+// E.g. sign=85776ede686fe4783eac48135b0b1748ba2d7e9bb7791b826dc942fc29d4ada8
+// Ecoflow documentation: https://developer-eu.ecoflow.com/us/document/generalInfo
 func (r *HttpRequest) generateSign(queryString, nonce, timestamp string) string {
 	keyValueString := r.getKeyValueString(queryString, nonce, timestamp)
-
 	return encryptHmacSHA256(keyValueString, r.secretKey)
 }
 
+// The generate keyValue string that is used during generation of a "sing" header.
+// The logic is to concatenate the values in specific order.
+// From ecoflow documents
+// Step 3: concatenate accessKey, nonce, timestamp
+// E.g. str=param1=value1&param2=value2&accessKey=***&nonce=...&timestamp=...
+// See step3 here: https://developer-eu.ecoflow.com/us/document/generalInfo
 func (r *HttpRequest) getKeyValueString(queryString string, nonce string, timestamp string) string {
 	keyValueString := accessKeyHeader + "=" + r.accessKey + "&" +
 		nonceHeader + "=" + nonce + "&" +
@@ -128,6 +138,12 @@ func (r *HttpRequest) getKeyValueString(queryString string, nonce string, timest
 	return keyValueString
 }
 
+// From ecoflow documentation
+// Step 1: request parameters must be sorted by ASCII value and concatenated with characters =, &
+// E.g. str=param1=value1&param2=value2
+// Step 2: if the type is nested, expand and splice according to the method of step 1.
+// E.g. deviceInfo.id=1&deviceList[0].id=1&deviceList[1].id=2&ids[0]=1&ids[1]=2&ids[2]=3&name=demo1
+// See step 1 and step 2 here: https://developer-eu.ecoflow.com/us/document/generalInfo
 func generateQueryParams(requestParams map[string]interface{}) string {
 	sortKeyValueMap := requestParams
 	keys := make([]string, 0, len(sortKeyValueMap))
@@ -144,10 +160,12 @@ func generateQueryParams(requestParams map[string]interface{}) string {
 	return queryString
 }
 
+// timestamp is a UTC timestamp (in nano)
 func generateTimestamp() string {
 	return fmt.Sprint(time.Now().UnixNano())
 }
 
+// nonce is a random int with 6 digits
 func generateNonce() string {
 	return strconv.Itoa(rand.Intn(900000) + 100000)
 }

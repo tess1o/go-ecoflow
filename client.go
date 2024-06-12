@@ -18,7 +18,14 @@ type Client struct {
 	secretToken string
 }
 
-func NewEcoflowClient(accessToken, secretToken string, httpClient *http.Client) *Client {
+// NewEcoflowClient with default http client
+func NewEcoflowClient(accessToken, secretToken string) *Client {
+	return NewEcoflowClientWithHttpClient(accessToken, secretToken, nil)
+}
+
+// NewEcoflowClientWithHttpClient EcoflowClient with custom httpClient.
+// HttpClient can be helpful when a proxy is required or some other custom transport, etc
+func NewEcoflowClientWithHttpClient(accessToken, secretToken string, httpClient *http.Client) *Client {
 	h := httpClient
 	if h == nil {
 		h = &http.Client{}

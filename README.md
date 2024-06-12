@@ -9,31 +9,50 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tess1o/go-ecoflow"
-)
-
-const (
-	accessKey = "your_access_key"
-	secretKey = "your_secret_key"
+	"log/slog"
+	"net/http"
+	"os"
+	"time"
 )
 
 func main() {
-	client := ecoflow.NewEcoflowClient(accessKey, secretKey, nil)
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	accessKey := os.Getenv("ACCESS_KEY")
+	secretKey := os.Getenv("SECRET_KEY")
+
+	if accessKey == "" || secretKey == "" {
+		slog.Error("AccessKey and SecretKey are mandatory")
+	}
+
+	//creating new client. Http client can be customized if required
+	client := ecoflow.NewEcoflowClient(accessKey, secretKey)
+
+	//get all linked ecoflow devices
 	devices, err := client.GetDeviceList(context.Background())
 	if err != nil {
-		log.Fatalf("Error: %+v\n", err)
+		slog.Error("Cannot get device list", "error", err)
 		return
 	}
+
+	//for each device get all parameters
 	for _, d := range devices.Devices {
-		fmt.Printf("Device SN: %s, Online: %d\n", d.SN, d.Online)
-		quote, err := client.GetDeviceAllQuote(context.TODO(), d.SN)
-		if err != nil {
-			fmt.Printf("Error: %+v\n", err)
+		slog.Info("Linked device", "SN", d.SN, "is online", d.Online)
+		quote, quoteErr := client.GetDeviceAllQuote(context.TODO(), d.SN)
+		if quoteErr != nil {
+			slog.Error("Cannot get quote for device", "sn", d.SN, "error", quoteErr)
 		}
-		log.Printf("Device parameters: %+v\n", quote)
+		slog.Info("Quote parameters", "sn", d.SN, "params", quote)
 	}
+
+	// configure prometheus scrap interval and metric prefix
+	config := ecoflow.PrometheusConfig{Interval: time.Second * 10, Prefix: "ecoflow"}
+	client.RecordPrometheusMetrics(&config)
+
+	// start server with metrics
+	http.Handle("/metrics", promhttp.Handler())
+	http.ListenAndServe(":2112", nil)
 }
 
 ```
