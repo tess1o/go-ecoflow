@@ -1,30 +1,25 @@
-Partial implementation of Ecoflow Rest API that allows to get list of devices and their parameters (quotas).
-
-Link to official documentation: https://developer-eu.ecoflow.com/us/document/introduction \
-Response mapping: [here](docs/fields_mapping.md)
-Usage example (also see examples in `examples` folder)
-
-```go
 package main
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"github.com/tess1o/go-ecoflow"
-)
-
-const (
-	accessKey = "your_access_key"
-	secretKey = "your_secret_key"
+	"log"
+	"os"
 )
 
 func main() {
+	accessKey := os.Getenv("ACCESS_KEY")
+	secretKey := os.Getenv("SECRET_KEY")
+
+	if accessKey == "" || secretKey == "" {
+		log.Fatalf("AccessKey and SecretKey are mandatory")
+	}
+
 	client := ecoflow.NewEcoflowClient(accessKey, secretKey, nil)
 	devices, err := client.GetDeviceList(context.Background())
 	if err != nil {
 		log.Fatalf("Error: %+v\n", err)
-		return
 	}
 	for _, d := range devices.Devices {
 		fmt.Printf("Device SN: %s, Online: %d\n", d.SN, d.Online)
@@ -32,8 +27,6 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error: %+v\n", err)
 		}
-		log.Printf("Device parameters: %+v\n", quote)
+		log.Printf("Quote: %+v\n", quote)
 	}
 }
-
-```
