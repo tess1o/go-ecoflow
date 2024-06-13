@@ -59,7 +59,7 @@ func (c *Client) RecordPrometheusMetrics(config *PrometheusConfig) {
 					handleOfflineDevice(metrics, dev)
 					continue
 				}
-				rawParameters["online"] = dev.Online
+				rawParameters["online"] = float64(dev.Online)
 				handleMetrics(metrics, rawParameters, config, dev)
 			}
 		}
