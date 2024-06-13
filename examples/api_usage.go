@@ -17,6 +17,7 @@ func main() {
 
 	if accessKey == "" || secretKey == "" {
 		slog.Error("AccessKey and SecretKey are mandatory")
+		return
 	}
 
 	//creating new client. Http client can be customized if required
