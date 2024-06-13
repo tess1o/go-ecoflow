@@ -86,6 +86,11 @@ func (c *Client) RecordPrometheusMetrics(config *PrometheusConfig) {
 //
 // Returns: None.
 func handleMetrics(metrics map[string]prometheus.Gauge, parameterGroup any, config *PrometheusConfig, dev DeviceInfo) {
+	if parameterGroup == nil {
+		slog.Debug("No parameters provided")
+		return
+	}
+
 	var params map[string]interface{}
 	paramBytes, err := json.Marshal(parameterGroup)
 	if err != nil {
