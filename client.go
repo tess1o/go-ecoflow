@@ -3,6 +3,8 @@ package ecoflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -49,15 +51,15 @@ func (c *Client) GetDeviceList(ctx context.Context) (*DeviceListResponse, error)
 	if err != nil {
 		return nil, err
 	}
+
+	if deviceResponse.Code != "0" {
+		return &deviceResponse, errors.New(fmt.Sprintf("can't get device list, error code %s", deviceResponse.Code))
+	}
 	return &deviceResponse, nil
 }
 
 func (c *Client) GetDeviceAllQuote(ctx context.Context, deviceSn string) (*DeviceQuotaResponse, error) {
-	params := make(map[string]interface{})
-	params["sn"] = deviceSn
-
-	request := NewHttpRequest(c.httpClient, "GET", getAllQuoteUrl, params, c.accessToken, c.secretToken)
-	response, err := request.Execute(ctx)
+	response, err := c.getDeviceQuoteParams(ctx, deviceSn)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +70,11 @@ func (c *Client) GetDeviceAllQuote(ctx context.Context, deviceSn string) (*Devic
 	if err != nil {
 		return nil, err
 	}
+
+	if quotaResponse.Code != "0" {
+		return nil, errors.New(fmt.Sprintf("can't get parameters, error code %s", quotaResponse.Code))
+	}
+
 	var jsonData map[string]interface{}
 	err = json.Unmarshal(response, &jsonData)
 	if err != nil {
@@ -115,4 +122,44 @@ func (c *Client) GetDeviceAllQuote(ctx context.Context, deviceSn string) (*Devic
 	quotaResponse.Data.Mppt = mppt
 
 	return &quotaResponse, nil
+}
+
+func (c *Client) GetDeviceQuoteRawParameters(ctx context.Context, deviceSn string) (map[string]interface{}, error) {
+	response, err := c.getDeviceQuoteParams(ctx, deviceSn)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonData map[string]interface{}
+	err = json.Unmarshal(response, &jsonData)
+	if err != nil {
+		return nil, err
+	}
+
+	if code, ok := jsonData["code"].(string); !ok || code != "0" {
+		return nil, errors.New(fmt.Sprintf("can't get parameters, error code %s", code))
+	}
+
+	var params = make(map[string]interface{})
+	dataMap, ok := jsonData["data"].(map[string]interface{})
+
+	if !ok {
+		return nil, errors.New("response is not valid, can't process it")
+	}
+
+	for k, v := range dataMap {
+		if floatVal, isFloat := v.(float64); isFloat {
+			params[k] = floatVal
+		}
+	}
+
+	return params, err
+}
+
+func (c *Client) getDeviceQuoteParams(ctx context.Context, deviceSn string) ([]byte, error) {
+	params := make(map[string]interface{})
+	params["sn"] = deviceSn
+
+	request := NewHttpRequest(c.httpClient, "GET", getAllQuoteUrl, params, c.accessToken, c.secretToken)
+	return request.Execute(ctx)
 }

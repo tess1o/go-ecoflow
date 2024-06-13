@@ -3,7 +3,6 @@ package ecoflow
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
@@ -43,29 +42,36 @@ func (c *Client) RecordPrometheusMetrics(config *PrometheusConfig) {
 	go func() {
 		for _ = time.Now(); ; _ = <-ticker.C {
 			devices, err := c.GetDeviceList(context.Background())
-			if err != nil || devices.Code != "0" {
+			if err != nil {
 				slog.Error("Cannot get devices list", "error", err)
 				continue
 			}
 
 			for _, dev := range devices.Devices {
-				quota, quoteErr := c.GetDeviceAllQuote(context.Background(), dev.SN)
-				if quoteErr != nil || quota.Code != "0" {
-					slog.Error("Cannot get device quota", "device", dev.SN, "error", quoteErr)
+				rawParameters, pErr := c.GetDeviceQuoteRawParameters(context.Background(), dev.SN)
+				if pErr != nil {
+					slog.Error("Cannot get device quota", "SN", dev.SN, "error", pErr)
 					continue
 				}
 
-				handleOneMetric(metrics, "online", float64(dev.Online), config, dev)
-
-				handleMetrics(metrics, quota.Data.Pd, config, dev)
-				handleMetrics(metrics, quota.Data.Inv, config, dev)
-				handleMetrics(metrics, quota.Data.Mppt, config, dev)
-				handleMetrics(metrics, quota.Data.BmsEmsStatus, config, dev)
-				handleMetrics(metrics, quota.Data.BmsBmsStatus, config, dev)
-				handleMetrics(metrics, quota.Data.BmsSlave, config, dev)
+				if dev.Online == 0 {
+					slog.Info("Device is offline. Setting all metrics to 0", "SN", dev.SN)
+					handleOfflineDevice(metrics, dev)
+					continue
+				}
+				rawParameters["online"] = dev.Online
+				handleMetrics(metrics, rawParameters, config, dev)
 			}
 		}
 	}()
+}
+
+func handleOfflineDevice(metrics map[string]prometheus.Gauge, dev DeviceInfo) {
+	for k, v := range metrics {
+		if strings.Contains(k, dev.SN) {
+			v.Set(0)
+		}
+	}
 }
 
 // handleMetrics iterates through the parameterGroup map, calling handleOneMetric for each key-value pair.
@@ -85,21 +91,9 @@ func (c *Client) RecordPrometheusMetrics(config *PrometheusConfig) {
 //	dev: The DeviceInfo object.
 //
 // Returns: None.
-func handleMetrics(metrics map[string]prometheus.Gauge, parameterGroup any, config *PrometheusConfig, dev DeviceInfo) {
-	if parameterGroup == nil {
+func handleMetrics(metrics map[string]prometheus.Gauge, params map[string]interface{}, config *PrometheusConfig, dev DeviceInfo) {
+	if len(params) == 0 {
 		slog.Debug("No parameters provided")
-		return
-	}
-
-	var params map[string]interface{}
-	paramBytes, err := json.Marshal(parameterGroup)
-	if err != nil {
-		slog.Error("Unable to marshal parameters", "error", err)
-		return
-	}
-	err = json.Unmarshal(paramBytes, &params)
-	if err != nil {
-		slog.Error("Unable to unmarshal parameters", "error", err)
 		return
 	}
 
