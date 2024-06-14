@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -15,7 +16,7 @@ const (
 )
 
 type Client struct {
-	httpClient  *http.Client
+	httpClient  *http.Client //can be customized if required
 	accessToken string
 	secretToken string
 }
@@ -39,6 +40,8 @@ func NewEcoflowClientWithHttpClient(accessToken, secretToken string, httpClient 
 	}
 }
 
+// GetDeviceList executes a request to get the list of devises linked to the user account. Shared devices are not included
+// If the response parameter "code" is not 0, then there is an error. Error code and error message are returned
 func (c *Client) GetDeviceList(ctx context.Context) (*DeviceListResponse, error) {
 	request := NewHttpRequest(c.httpClient, "GET", deviceListUrl, nil, c.accessToken, c.secretToken)
 	response, err := request.Execute(ctx)
@@ -47,17 +50,24 @@ func (c *Client) GetDeviceList(ctx context.Context) (*DeviceListResponse, error)
 	}
 	var deviceResponse DeviceListResponse
 
+	slog.Info("Response", string(response))
+
 	err = json.Unmarshal(response, &deviceResponse)
 	if err != nil {
 		return nil, err
 	}
 
 	if deviceResponse.Code != "0" {
-		return &deviceResponse, errors.New(fmt.Sprintf("can't get device list, error code %s", deviceResponse.Code))
+		return &deviceResponse, errors.New(fmt.Sprintf("can't get device list, error code: %s, error message: %s", deviceResponse.Code, deviceResponse.Message))
 	}
 	return &deviceResponse, nil
 }
 
+// GetDeviceAllQuote executes a request to get the parameters for a specific device.
+// If the response parameter "code" is not 0, then there is an error. Error code and error message are returned.
+// The raw parameters are unmarshalled into the DeviceQuotaResponse struct.
+// The data field of the response is manually mapped to the appropriate structs (PdProperties, BmsEmsStatusProperties, BmsBmsStatusProperties, InvProperties, MpptProperties).
+// The mapped data is assigned to the response struct and returned.
 func (c *Client) GetDeviceAllQuote(ctx context.Context, deviceSn string) (*DeviceQuotaResponse, error) {
 	response, err := c.getDeviceQuoteParams(ctx, deviceSn)
 	if err != nil {
@@ -72,7 +82,7 @@ func (c *Client) GetDeviceAllQuote(ctx context.Context, deviceSn string) (*Devic
 	}
 
 	if quotaResponse.Code != "0" {
-		return nil, errors.New(fmt.Sprintf("can't get parameters, error code %s", quotaResponse.Code))
+		return nil, errors.New(fmt.Sprintf("can't get parameters, error code: %s, error message: %s", quotaResponse.Code, quotaResponse.Message))
 	}
 
 	var jsonData map[string]interface{}
@@ -124,6 +134,12 @@ func (c *Client) GetDeviceAllQuote(ctx context.Context, deviceSn string) (*Devic
 	return &quotaResponse, nil
 }
 
+// GetDeviceQuoteRawParameters executes a request to get the raw parameters ("as is") for a specific device.
+// It returns a map[string]interface{} containing the parameters and an error if any. The value type is mostly int, for some parameters it's float64 or []int
+// If the response parameter "code" is not "0", then there is an error and the error message is returned.
+// The parameters are taken from the Ecoflow response, "data" field
+// Only parameters with float64 values are included in the returned map (int's are casted to float's)
+// If the response is not valid or cannot be processed, an error is returned.
 func (c *Client) GetDeviceQuoteRawParameters(ctx context.Context, deviceSn string) (map[string]interface{}, error) {
 	response, err := c.getDeviceQuoteParams(ctx, deviceSn)
 	if err != nil {
@@ -156,6 +172,9 @@ func (c *Client) GetDeviceQuoteRawParameters(ctx context.Context, deviceSn strin
 	return params, err
 }
 
+// getDeviceQuoteParams executes a request to get the parameters for a specific device.
+// The device serial number is passed as a parameter.
+// The response is returned in the form of a byte array and an error, if any.
 func (c *Client) getDeviceQuoteParams(ctx context.Context, deviceSn string) ([]byte, error) {
 	params := make(map[string]interface{})
 	params["sn"] = deviceSn

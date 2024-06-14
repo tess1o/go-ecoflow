@@ -33,6 +33,16 @@ type HttpRequest struct {
 	getSignParameters func() *signParameters //required for unit testing
 }
 
+// NewHttpRequest is a function that creates a new HttpRequest object with the provided parameters.
+// Parameters:
+// - httpClient: The HTTP client to use for making the request.
+// - method: The HTTP method to use for the request (e.g., GET, POST).
+// - uri: The URI of the request.
+// - params: The request parameters as a map[string]interface{}.
+// - accessKey: The access key for authentication.
+// - secretKey: The secret key for authentication.
+// Returns:
+// - httpRequest: The new HttpRequest object.
 func NewHttpRequest(httpClient *http.Client, method string, uri string, params map[string]interface{}, accessKey, secretKey string) *HttpRequest {
 	r := &HttpRequest{
 		httpClient:        httpClient,
@@ -51,6 +61,11 @@ func NewHttpRequest(httpClient *http.Client, method string, uri string, params m
 	return r
 }
 
+// The Execute method sends an HTTP request and returns the response body as a byte slice
+// The request contains all  headers required by Ecoflow Rest API (timestamp, nonce, sign, accessKey)
+// For POST requests the parameters are provided in the request body, correct Content-Type is set
+// For GET requests the parameters are added to GET request query.
+// The query has predefined rules which are described here: https://developer-eu.ecoflow.com/us/document/generalInfo
 func (r *HttpRequest) Execute(ctx context.Context) ([]byte, error) {
 	signParams := r.getSignParameters()
 	requestURI := r.uri + "?" + signParams.queryParams
@@ -155,6 +170,7 @@ func (r *HttpRequest) getKeyValueString(queryString string, nonce string, timest
 // Step 2: if the type is nested, expand and splice according to the method of step 1.
 // E.g. deviceInfo.id=1&deviceList[0].id=1&deviceList[1].id=2&ids[0]=1&ids[1]=2&ids[2]=3&name=demo1
 // See step 1 and step 2 here: https://developer-eu.ecoflow.com/us/document/generalInfo
+// This implementation uses a recursion to get all request parameters (even nested json structure) and creates an expected query string
 func generateQueryParams(data map[string]interface{}) string {
 	var result []string
 
@@ -170,6 +186,19 @@ func generateQueryParams(data map[string]interface{}) string {
 	return strings.Join(result, "&")
 }
 
+// processValue is a recursive function that processes a value based on its type and returns a slice of strings.
+// Parameters:
+// - prefix: The prefix to be appended to the processed value.
+// - value: The value to be processed.
+// Returns:
+// - result: A slice of strings containing the processed values.
+// Possible value types and their processing:
+// - map[string]interface{}: Recursively process nested maps by appending the nested key to the prefix.
+// - []interface{}: Recursively process items in arrays by appending the index to the prefix.
+// - string: Append the key-value pair to the result slice.
+// - int: Append the key-value pair to the result slice after converting the int to a string.
+// - float64: Append the key-value pair to the result slice after converting the float64 to a string.
+// - bool: Append the key-value pair to the result slice after converting the bool to a string.
 func processValue(prefix string, value interface{}) []string {
 	var result []string
 	switch v := value.(type) {
