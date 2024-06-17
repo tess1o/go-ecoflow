@@ -104,3 +104,14 @@ func main() {
 }
 
 ```
+
+## ToDo
+
+I don't have those devices, however I will try to implement the APIs
+
+1. Set API for Power Stations "PRO"
+2. Set API for Smart Home Panel
+3. Set API for PowerStream Micro-inverter
+4. Set API for WAVE Air Conditioner
+5. Set API for GLACIER
+6. Set API for Power Kits

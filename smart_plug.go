@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// Ecoflow documentation: https://developer-eu.ecoflow.com/us/document/smartPlug
+
 type SmartPlug struct {
 	c  *Client
 	sn string
@@ -66,7 +68,7 @@ func (s *SmartPlug) setParameter(ctx context.Context, cmdCode string, params map
 	if err != nil {
 		return nil, err
 	}
-	return s.c.setDeviceParameter(ctx, req)
+	return s.c.SetDeviceParameter(ctx, req)
 }
 
 func (s *SmartPlug) GetParameter(ctx context.Context, params []string) (*GetCmdResponse, error) {

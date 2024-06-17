@@ -128,7 +128,10 @@ func getParamsEnabled(enabled SettingSwitcher) map[string]interface{} {
 	return params
 }
 
-func (c *Client) setDeviceParameter(ctx context.Context, request map[string]interface{}) (*CmdSetResponse, error) {
+// SetDeviceParameter exporter function to set device's settings.The request is a JSON map that will be sent to the server
+// Each device has its own request structure so this function works for all types of devices.
+// This function can be used even if your device type is not supported by this library
+func (c *Client) SetDeviceParameter(ctx context.Context, request map[string]interface{}) (*CmdSetResponse, error) {
 	slog.Debug("SetDeviceParameter", "request", request)
 
 	r := NewHttpRequest(c.httpClient, "PUT", c.baseUrl+setDeviceFunctionUrl, request, c.accessToken, c.secretToken)
@@ -166,6 +169,8 @@ type GetCmdResponse struct {
 	Tid             string                 `json:"tid"`
 }
 
+// GetDeviceParameters returns specified parameters for device
+// This is a generic function that works for all types of devices
 func (c *Client) GetDeviceParameters(ctx context.Context, deviceSN string, params []string) (*GetCmdResponse, error) {
 	if len(params) == 0 {
 		return nil, errors.New("parameters are mandatory")
@@ -214,6 +219,7 @@ func (c *Client) GetDeviceParameters(ctx context.Context, deviceSN string, param
 }
 
 // GetDeviceAllParameters executes a request to get the raw parameters ("as is") for a specific device.
+// This function works for all types of devices.
 // It returns a map[string]interface{} containing the parameters and an error if any. The value type is mostly int, for some parameters it's float64 or []int
 // If the response parameter "code" is not "0", then there is an error and the error message is returned.
 // The parameters are taken from the Ecoflow response, "data" field
