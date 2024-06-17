@@ -12,8 +12,9 @@ The Ecoflow documentation is not complete and sometimes hard to understand, thus
 
 ## Supported devices:
 
-1. Power Stations (except PRO version)
-2. Smart Plug
+1. Power Stations (regular, Delta 2, River 2, etc)
+2. Power Stations (PRO)
+   3Smart Plug
 
 ## Features
 
@@ -23,6 +24,8 @@ The library allows to:
 2. Get specified parameters from a device
 3. Get all parameters from a device
 4. Change device's settings
+
+Basically that's all documented features the Ecoflow REST API provides
 
 ## Documentation
 
@@ -114,9 +117,8 @@ func main() {
 
 I don't have those devices, however I will try to implement the APIs
 
-1. Set API for Power Stations "PRO"
-2. Set API for Smart Home Panel
-3. Set API for PowerStream Micro-inverter
-4. Set API for WAVE Air Conditioner
-5. Set API for GLACIER
-6. Set API for Power Kits
+1. Set API for Smart Home Panel
+2. Set API for PowerStream Micro-inverter
+3. Set API for WAVE Air Conditioner
+4. Set API for GLACIER
+5. Set API for Power Kits
