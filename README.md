@@ -17,6 +17,7 @@ The Ecoflow documentation is not complete and sometimes hard to understand, thus
 3. Smart Plug
 4. PowerStream Micro Inverter
 5. Smart Home Panel
+6. Wave Air Conditioner
 
 ## Features
 
@@ -119,6 +120,5 @@ func main() {
 
 I don't have those devices, however I will try to implement the APIs
 
-1. Set API for WAVE Air Conditioner
-2. Set API for GLACIER
-3. Set API for Power Kits
+1. Set API for GLACIER
+2. Set API for Power Kits
