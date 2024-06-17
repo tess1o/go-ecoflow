@@ -17,33 +17,54 @@ func main() {
 		return
 	}
 
-	//creating new client.
-	//Http client can be customized if required (see ecoflow.NewEcoflowClientWithHttpClient(accessKey, secretKey, httpClient))
+	//create new client.
 	client := ecoflow.NewEcoflowClient(accessKey, secretKey)
 
-	//get all linked ecoflow devices
-	devices, err := client.GetDeviceList(context.Background())
-	if err != nil {
-		slog.Error("Cannot get device list", "error", err, "response", devices)
-		return
-	}
+	// creating new client with options. Current supports two options:
+	// 1. custom ecoflow base url (can be used with proxies, or if they change the url)
+	// 2. custom http client
 
-	//for each device get all parameters
-	for _, d := range devices.Devices {
-		slog.Info("Linked device", "SN", d.SN, "is online", d.Online)
+	// client = ecoflow.NewEcoflowClient(accessKey, secretKey,
+	//	ecoflow.WithBaseUrl("https://ecoflow-api.example.com"),
+	//	ecoflow.WithHttpClient(customHttpClient()),
+	//)
 
-		// get device quote. The list of parameters might be incomplete, raise an Issue if something is missing
-		quote, quoteErr := client.GetDeviceAllQuote(context.TODO(), d.SN)
-		if quoteErr != nil {
-			slog.Error("Cannot get quote for device", "sn", d.SN, "error", quoteErr)
-		}
-		slog.Info("Quote parameters", "sn", d.SN, "params", quote)
+	//get all linked ecoflow devices. Returns SN and online status
+	client.GetDeviceList(context.Background())
 
-		// get all the parameters as map[string]interface{}. Some values are float64, some are ints and some are []int
-		params, paramErr := client.GetDeviceQuoteRawParameters(context.TODO(), d.SN)
-		if paramErr != nil {
-			slog.Error("Cannot get raw parameters for device", "sn", d.SN, "error", paramErr)
-		}
-		slog.Info("Raw parameters", "sn", d.SN, "params", params)
-	}
+	ctx := context.Background()
+
+	// get set / get functions for power stations. PRO version is not currently implemented
+	ps := client.GetPowerStation("SN_HERE")
+
+	//set functions
+	ps.SetDcSwitch(ctx, ecoflow.SettingEnabled)
+	ps.Set12VDcChargingCurrent(ctx, 100)
+	ps.SetAcChargingSettings(ctx, 500, 0)
+	ps.SetAcStandByTime(ctx, 60)
+	ps.SetBuzzerSilentMode(ctx, ecoflow.SettingDisabled)
+	ps.SetCarChargerSwitch(ctx, ecoflow.SettingEnabled)
+	ps.SetMaxChargeSoC(ctx, 99)
+	ps.SetMinDischargeSoC(ctx, 1)
+	ps.SetSoCToTurnOnSmartGenerator(ctx, 50)
+	ps.SetSoCToTurnOffSmartGenerator(ctx, 99)
+	ps.SetStandByTime(ctx, 60)
+	ps.SetCarStandByTime(ctx, 60)
+	ps.SetPrioritizePolarCharging(ctx, ecoflow.SettingEnabled)
+
+	//get functions
+	ps.GetAllParameters(ctx)
+	ps.GetParameter(ctx, []string{"mppt.acStandbyMins", "mppt.dcChgCurrent"})
+
+	// get SmartPlug instance with set/get functions
+	plug := client.GetSmartPlug("SN_HERE")
+
+	//set functions
+	plug.SetRelaySwitch(ctx, ecoflow.SettingEnabled)
+	plug.SetIndicatorBrightness(ctx, 1000)
+	plug.DeleteScheduledTasks(ctx, 1)
+
+	//get functions
+	plug.GetAllParameters(ctx)
+	plug.GetParameter(ctx, []string{"2_1.switchSta", "2_1.brightness"})
 }

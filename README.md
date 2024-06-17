@@ -1,8 +1,34 @@
-Partial implementation of Ecoflow Rest API that allows to get list of devices and their parameters (quotas).
+# ecoflow API implementation via REST API in Go
 
-Link to official documentation: https://developer-eu.ecoflow.com/us/document/introduction \
-Response mapping: [here](docs/fields_mapping.md)
-No external dependencies.
+## Caution
+
+This library is in heavy development and public API can be changed until a stable version is released.
+
+## About
+
+Partial implementation of Ecoflow Rest API that allows to get list of devices, parameters and set settings.\
+The library was tested on Ecoflow Delta 2 and Ecoflow River 2 (I don't have other their products)
+
+## Supported devices:
+
+1. Power Stations (except PRO version)
+2. Smart Plug
+
+## Features
+
+The library allows to:
+
+1. Get list of all linked devices
+2. Get specified parameters from a device
+3. Get all parameters from a device
+4. Change device's settings
+
+## Documentation
+
+Link to official documentation: https://developer-eu.ecoflow.com/us/document/introduction
+
+## Usage example
+
 Usage example (also see examples in `examples` folder)
 
 ```go
@@ -25,32 +51,56 @@ func main() {
 		return
 	}
 
-	//creating new client. Http client can be customized if required
+	//create new client.
 	client := ecoflow.NewEcoflowClient(accessKey, secretKey)
 
-	//get all linked ecoflow devices
-	devices, err := client.GetDeviceList(context.Background())
-	if err != nil {
-		slog.Error("Cannot get device list", "error", err)
-		return
-	}
+	// creating new client with options. Current supports two options:
+	// 1. custom ecoflow base url (can be used with proxies, or if they change the url)
+	// 2. custom http client
 
-	//for each device get all parameters
-	for _, d := range devices.Devices {
-		slog.Info("Linked device", "SN", d.SN, "is online", d.Online)
+	// client = ecoflow.NewEcoflowClient(accessKey, secretKey,
+	//	ecoflow.WithBaseUrl("https://ecoflow-api.example.com"),
+	//	ecoflow.WithHttpClient(customHttpClient()),
+	//)
 
-		quote, quoteErr := client.GetDeviceAllQuote(context.TODO(), d.SN)
-		if quoteErr != nil {
-			slog.Error("Cannot get quote for device", "sn", d.SN, "error", quoteErr)
-		}
-		slog.Info("Quote parameters", "sn", d.SN, "params", quote)
+	//get all linked ecoflow devices. Returns SN and online status
+	client.GetDeviceList(context.Background())
 
-		params, paramErr := client.GetDeviceQuoteRawParameters(context.TODO(), d.SN)
-		if paramErr != nil {
-			slog.Error("Cannot get raw parameters for device", "sn", d.SN, "error", paramErr)
-		}
-		slog.Info("Raw parameters", "sn", d.SN, "params", params)
-	}
+	ctx := context.Background()
+
+	// get set / get functions for power stations. PRO version is not currently implemented
+	ps := client.GetPowerStation("SN_HERE")
+
+	//set functions
+	ps.SetDcSwitch(ctx, ecoflow.SettingEnabled)
+	ps.Set12VDcChargingCurrent(ctx, 100)
+	ps.SetAcChargingSettings(ctx, 500, 0)
+	ps.SetAcStandByTime(ctx, 60)
+	ps.SetBuzzerSilentMode(ctx, ecoflow.SettingDisabled)
+	ps.SetCarChargerSwitch(ctx, ecoflow.SettingEnabled)
+	ps.SetMaxChargeSoC(ctx, 99)
+	ps.SetMinDischargeSoC(ctx, 1)
+	ps.SetSoCToTurnOnSmartGenerator(ctx, 50)
+	ps.SetSoCToTurnOffSmartGenerator(ctx, 99)
+	ps.SetStandByTime(ctx, 60)
+	ps.SetCarStandByTime(ctx, 60)
+	ps.SetPrioritizePolarCharging(ctx, ecoflow.SettingEnabled)
+
+	//get functions
+	ps.GetAllParameters(ctx)
+	ps.GetParameter(ctx, []string{"mppt.acStandbyMins", "mppt.dcChgCurrent"})
+
+	// get SmartPlug instance with set/get functions
+	plug := client.GetSmartPlug("SN_HERE")
+
+	//set functions
+	plug.SetRelaySwitch(ctx, ecoflow.SettingEnabled)
+	plug.SetIndicatorBrightness(ctx, 1000)
+	plug.DeleteScheduledTasks(ctx, 1)
+
+	//get functions
+	plug.GetAllParameters(ctx)
+	plug.GetParameter(ctx, []string{"2_1.switchSta", "2_1.brightness"})
 }
 
 ```

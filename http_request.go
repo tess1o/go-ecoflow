@@ -92,6 +92,13 @@ func (r *HttpRequest) Execute(ctx context.Context) ([]byte, error) {
 			return nil, err
 		}
 		httpReq.Header.Add("Content-Type", "application/json;charset=UTF-8")
+	case http.MethodPut:
+		httpReq, err = http.NewRequestWithContext(ctx, http.MethodPut, r.uri, &reqBody)
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Add("Content-Type", "application/json;charset=UTF-8")
+
 	default:
 		slog.Error("Only POST and GET methods are supported so far")
 		return nil, errors.New("unsupported http method")
