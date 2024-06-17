@@ -17,6 +17,13 @@ const (
 	getDeviceFunctionUrl = "/iot-open/sign/device/quota"
 )
 
+type GridFrequency int
+
+const (
+	GridFrequency50Hz GridFrequency = 1
+	GridFrequency60Hz GridFrequency = 2
+)
+
 type Client struct {
 	httpClient  *http.Client //can be customized if required
 	accessToken string
