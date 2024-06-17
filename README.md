@@ -7,7 +7,8 @@ This library is in heavy development and public API can be changed until a stabl
 ## About
 
 Partial implementation of Ecoflow Rest API that allows to get list of devices, parameters and set settings.\
-The library was tested on Ecoflow Delta 2 and Ecoflow River 2 (I don't have other their products)
+The library was tested on Ecoflow Delta 2 and Ecoflow River 2 (I don't have other their products)\
+The Ecoflow documentation is not complete and sometimes hard to understand, thus some APIs might not work as expected
 
 ## Supported devices:
 
@@ -65,13 +66,17 @@ func main() {
 
 	//get all linked ecoflow devices. Returns SN and online status
 	client.GetDeviceList(context.Background())
+	// get param1 and param2 for device 
+	client.GetDeviceParameters(context.Background(), "DEVICE_SERIAL_NUMBER", []string{"param1", "param2"})
+	// get all parameters for device
+	client.GetDeviceAllParameters(context.Background(), "DEVICE_SERIAL_NUMBER")
 
 	ctx := context.Background()
 
 	// get set / get functions for power stations. PRO version is not currently implemented
-	ps := client.GetPowerStation("SN_HERE")
+	ps := client.GetPowerStation("DEVICE_SERIAL_NUMBER")
 
-	//set functions
+	//set functions, see details in documentation to each function.
 	ps.SetDcSwitch(ctx, ecoflow.SettingEnabled)
 	ps.Set12VDcChargingCurrent(ctx, 100)
 	ps.SetAcChargingSettings(ctx, 500, 0)
@@ -86,12 +91,12 @@ func main() {
 	ps.SetCarStandByTime(ctx, 60)
 	ps.SetPrioritizePolarCharging(ctx, ecoflow.SettingEnabled)
 
-	//get functions
+	//get parameters functions
 	ps.GetAllParameters(ctx)
 	ps.GetParameter(ctx, []string{"mppt.acStandbyMins", "mppt.dcChgCurrent"})
 
 	// get SmartPlug instance with set/get functions
-	plug := client.GetSmartPlug("SN_HERE")
+	plug := client.GetSmartPlug("DEVICE_SERIAL_NUMBER")
 
 	//set functions
 	plug.SetRelaySwitch(ctx, ecoflow.SettingEnabled)

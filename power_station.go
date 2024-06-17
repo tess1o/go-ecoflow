@@ -11,6 +11,7 @@ import (
 // Ecoflow documentation:
 // https://developer-eu.ecoflow.com/us/document/delta2
 // https://developer-eu.ecoflow.com/us/document/delta2max
+// For PRO version the API is different, probably a separate struct will be created
 
 // TODO: Set AC discharge ("enabled" and X-Boost switch settings)
 // TODO: { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":5, "operateType":"acOutCfg", "params":{ "enabled":0, "xboost":0, "out_voltage":30, "out_freq":1 } }
