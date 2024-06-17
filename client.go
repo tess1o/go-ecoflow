@@ -24,6 +24,16 @@ const (
 	GridFrequency60Hz GridFrequency = 2
 )
 
+type ModuleType int
+
+const (
+	ModuleTypePd       ModuleType = 1
+	ModuleTypeBms      ModuleType = 2
+	ModuleTypeInv      ModuleType = 3
+	ModuleTypeBmsSlave ModuleType = 4
+	ModuleTypeMppt     ModuleType = 5
+)
+
 type Client struct {
 	httpClient  *http.Client //can be customized if required
 	accessToken string
@@ -93,6 +103,13 @@ func (c *Client) GetSmartPlug(sn string) *SmartPlug {
 	}
 }
 
+func (c *Client) GetWaveAirConditioner(sn string) *WaveAirConditioner {
+	return &WaveAirConditioner{
+		c:  c,
+		sn: sn,
+	}
+}
+
 type SettingSwitcher int
 
 const (
@@ -139,7 +156,7 @@ func (c *Client) GetDeviceList(ctx context.Context) (*DeviceListResponse, error)
 type CmdSetRequest struct {
 	Id          string                 `json:"id"`
 	OperateType string                 `json:"operateType,omitempty"`
-	ModuleType  PowerStationModuleType `json:"moduleType,omitempty"`
+	ModuleType  ModuleType             `json:"moduleType,omitempty"`
 	CmdCode     string                 `json:"cmdCode,omitempty"`
 	Sn          string                 `json:"sn"`
 	Params      map[string]interface{} `json:"params"`

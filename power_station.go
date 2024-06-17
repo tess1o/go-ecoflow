@@ -22,16 +22,6 @@ func (s *PowerStation) GetSn() string {
 	return s.sn
 }
 
-type PowerStationModuleType int
-
-const (
-	PowerStationModuleTypePd       PowerStationModuleType = 1
-	PowerStationModuleTypeBms      PowerStationModuleType = 2
-	PowerStationModuleTypeInv      PowerStationModuleType = 3
-	PowerStationModuleTypeBmsSlave PowerStationModuleType = 4
-	PowerStationModuleTypeMppt     PowerStationModuleType = 5
-)
-
 type PowerStationPvChargeType int
 
 const (
@@ -44,12 +34,12 @@ const (
 
 func (s *PowerStation) SetBuzzerSilentMode(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
 	params := getParamsEnabled(enabled)
-	return s.setParameter(ctx, "quietMode", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "quietMode", ModuleTypeMppt, params)
 }
 
 func (s *PowerStation) SetCarChargerSwitch(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
 	params := getParamsEnabled(enabled)
-	return s.setParameter(ctx, "mpptCar", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "mpptCar", ModuleTypeMppt, params)
 }
 
 // SetAcEnabled Set AC discharge ("enabled" and X-Boost switch settings)
@@ -63,7 +53,7 @@ func (s *PowerStation) SetAcEnabled(ctx context.Context, acEnabled, xBoostEnable
 	params["xboost"] = xBoostEnabled
 	params["out_freq"] = outFreq
 	params["out_voltage"] = outVoltage
-	return s.setParameter(ctx, "acOutCfg", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "acOutCfg", ModuleTypeMppt, params)
 }
 
 // SetAcChargingSettings From ecoflow documentation:
@@ -77,7 +67,7 @@ func (s *PowerStation) SetAcChargingSettings(ctx context.Context, chargeWatts in
 	params := make(map[string]interface{})
 	params["chgWatts"] = chargeWatts
 	params["chgPauseFlag"] = chgPauseFlag
-	return s.setParameter(ctx, "acChgCfg", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "acChgCfg", ModuleTypeMppt, params)
 }
 
 // SetAcStandByTime AC standby time when there is no load(0: never shuts down, default value: 12 x 60 mins, unit: minute)
@@ -88,7 +78,7 @@ func (s *PowerStation) SetAcStandByTime(ctx context.Context, standbyMins int) (*
 	}
 	params := make(map[string]interface{})
 	params["standbyMins"] = standbyMins
-	return s.setParameter(ctx, "standbyTime", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "standbyTime", ModuleTypeMppt, params)
 }
 
 // SetCarStandByTime CAR standby duration settings(Auto shutdown when there is no load, unit: minute)
@@ -99,7 +89,7 @@ func (s *PowerStation) SetCarStandByTime(ctx context.Context, standbyMins int) (
 	}
 	params := make(map[string]interface{})
 	params["standbyMins"] = standbyMins
-	return s.setParameter(ctx, "carStandby", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "carStandby", ModuleTypeMppt, params)
 }
 
 // Set12VDcChargingCurrent Set 12 V DC (car charger) charging current(Maximum DC charging current (mA), range: 4000 mA–10000 mA, default value: 8000 mA)
@@ -110,7 +100,7 @@ func (s *PowerStation) Set12VDcChargingCurrent(ctx context.Context, chargingCurr
 	}
 	params := make(map[string]interface{})
 	params["dcChgCfg"] = chargingCurrent
-	return s.setParameter(ctx, "dcChgCfg", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "dcChgCfg", ModuleTypeMppt, params)
 }
 
 // SetPvChargingTypeSettings PV charging type settings(chaType: 0: auto identification, 1: MPPT, 2: adapter, other values are invalid; chaType2: 0: auto identification, 1: MPPT, 2: adapter, other values are invalid)
@@ -119,7 +109,7 @@ func (s *PowerStation) SetPvChargingTypeSettings(ctx context.Context, chargeType
 	params := make(map[string]interface{})
 	params["chaType"] = chargeType1
 	params["chaType2"] = chargeType2
-	return s.setParameter(ctx, "chaType", PowerStationModuleTypeMppt, params)
+	return s.setParameter(ctx, "chaType", ModuleTypeMppt, params)
 }
 
 // PD parameters
@@ -129,14 +119,14 @@ func (s *PowerStation) SetPvChargingTypeSettings(ctx context.Context, chargeType
 func (s *PowerStation) SetStandByTime(ctx context.Context, standbyMin int) (*CmdSetResponse, error) {
 	params := make(map[string]interface{})
 	params["standbyMin"] = standbyMin
-	return s.setParameter(ctx, "standbyTime", PowerStationModuleTypePd, params)
+	return s.setParameter(ctx, "standbyTime", ModuleTypePd, params)
 }
 
 // SetDcSwitch Set DC(USB) switch(0: off, 1: on)
 // { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":1, "operateType":"dcOutCfg", "params":{ "enabled":0 } }
 func (s *PowerStation) SetDcSwitch(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
 	params := getParamsEnabled(enabled)
-	return s.setParameter(ctx, "dcOutCfg", PowerStationModuleTypePd, params)
+	return s.setParameter(ctx, "dcOutCfg", ModuleTypePd, params)
 }
 
 // SetLcdScreenTimeout LCD screen settings(delayOff: screen timeout, unit: seconds;brightLevel: must be set to 3; other values are invalid.)
@@ -148,14 +138,14 @@ func (s *PowerStation) SetLcdScreenTimeout(ctx context.Context, delayOffSeconds 
 	params := make(map[string]interface{})
 	params["delayOff"] = delayOffSeconds
 	params["brighLevel"] = 3
-	return s.setParameter(ctx, "lcdCfg", PowerStationModuleTypePd, params)
+	return s.setParameter(ctx, "lcdCfg", ModuleTypePd, params)
 }
 
 // SetPrioritizePolarCharging Prioritize solar charging
 // { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":1, "operateType":"pvChangePrio", "params":{ "pvChangeSet":0 } }
 func (s *PowerStation) SetPrioritizePolarCharging(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
 	params := getParamsEnabled(enabled)
-	return s.setParameter(ctx, "pvChangePrio", PowerStationModuleTypePd, params)
+	return s.setParameter(ctx, "pvChangePrio", ModuleTypePd, params)
 }
 
 // SetEnergyManagement Set energy management(isConfig: energy management, 0: disabled, 1: enabled; bpPowerSoc: backup reserve level; minDsgSoc: discharge limit (not in use);minChgSoc: charge limit (not in use))
@@ -176,7 +166,7 @@ func (s *PowerStation) SetEnergyManagement(ctx context.Context, enabled SettingS
 	params["bpPowerSoc"] = bpPowerSoc
 	params["minDsgSoc"] = minDsgSoc
 	params["minChgSoc"] = minChgSoc
-	return s.setParameter(ctx, "watthConfig", PowerStationModuleTypePd, params)
+	return s.setParameter(ctx, "watthConfig", ModuleTypePd, params)
 }
 
 // SetAcAlwaysOn Set AC always on (acAutoOutConfig: 0: disabled; 1: enabled;minAcOutSoc: minimum SoC for turning on "AC always on" )
@@ -188,7 +178,7 @@ func (s *PowerStation) SetAcAlwaysOn(ctx context.Context, enabled SettingSwitche
 	params := make(map[string]interface{})
 	params["acAutoOutConfig"] = enabled
 	params["minAcOutSoc"] = minAcOutSoc
-	return s.setParameter(ctx, "acAutoOutConfig", PowerStationModuleTypePd, params)
+	return s.setParameter(ctx, "acAutoOutConfig", ModuleTypePd, params)
 }
 
 //BMS parameters
@@ -201,7 +191,7 @@ func (s *PowerStation) SetMaxChargeSoC(ctx context.Context, maxChgSoc int) (*Cmd
 	}
 	params := make(map[string]interface{})
 	params["maxChgSoc"] = maxChgSoc
-	return s.setParameter(ctx, "upsConfig", PowerStationModuleTypeBms, params)
+	return s.setParameter(ctx, "upsConfig", ModuleTypeBms, params)
 }
 
 // SetMinDischargeSoC SOC lower limit when discharging
@@ -212,7 +202,7 @@ func (s *PowerStation) SetMinDischargeSoC(ctx context.Context, minDsgSoc int) (*
 	}
 	params := make(map[string]interface{})
 	params["minDsgSoc"] = minDsgSoc
-	return s.setParameter(ctx, "dsgCfg", PowerStationModuleTypeBms, params)
+	return s.setParameter(ctx, "dsgCfg", ModuleTypeBms, params)
 }
 
 // SetSoCToTurnOnSmartGenerator SoC that triggers EMS to turn on Smart Generator
@@ -223,7 +213,7 @@ func (s *PowerStation) SetSoCToTurnOnSmartGenerator(ctx context.Context, openOil
 	}
 	params := make(map[string]interface{})
 	params["openOilSoc"] = openOilSoc
-	return s.setParameter(ctx, "openOilSoc", PowerStationModuleTypeBms, params)
+	return s.setParameter(ctx, "openOilSoc", ModuleTypeBms, params)
 }
 
 // SetSoCToTurnOffSmartGenerator SOC that triggers EMS to turn off Smart Generator
@@ -234,7 +224,7 @@ func (s *PowerStation) SetSoCToTurnOffSmartGenerator(ctx context.Context, closeO
 	}
 	params := make(map[string]interface{})
 	params["closeOilSoc"] = closeOilSoc
-	return s.setParameter(ctx, "closeOilSoc", PowerStationModuleTypeBms, params)
+	return s.setParameter(ctx, "closeOilSoc", ModuleTypeBms, params)
 }
 
 func (s *PowerStation) GetParameter(ctx context.Context, params []string) (*GetCmdResponse, error) {
@@ -245,7 +235,7 @@ func (s *PowerStation) GetAllParameters(ctx context.Context) (map[string]interfa
 	return s.c.GetDeviceAllParameters(ctx, s.sn)
 }
 
-func (s *PowerStation) setParameter(ctx context.Context, opType string, modType PowerStationModuleType, params map[string]interface{}) (*CmdSetResponse, error) {
+func (s *PowerStation) setParameter(ctx context.Context, opType string, modType ModuleType, params map[string]interface{}) (*CmdSetResponse, error) {
 	cmdReq := CmdSetRequest{
 		Id:          fmt.Sprint(time.Now().UnixMilli()),
 		OperateType: opType,
