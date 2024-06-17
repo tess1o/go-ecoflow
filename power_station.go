@@ -13,9 +13,6 @@ import (
 // https://developer-eu.ecoflow.com/us/document/delta2max
 // For PRO version the API is different, probably a separate struct will be created
 
-// TODO: Set AC discharge ("enabled" and X-Boost switch settings)
-// TODO: { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":5, "operateType":"acOutCfg", "params":{ "enabled":0, "xboost":0, "out_voltage":30, "out_freq":1 } }
-
 type PowerStation struct {
 	c  *Client
 	sn string
@@ -35,16 +32,38 @@ const (
 	PowerStationModuleTypeMppt     PowerStationModuleType = 5
 )
 
+type PowerStationPvChargeType int
+
+const (
+	PowerStationPvChargeTypeAuto    PowerStationPvChargeType = 0
+	PowerStationPvChargeTypeMppt    PowerStationPvChargeType = 1
+	PowerStationPvChargeTypeAdapter PowerStationPvChargeType = 2
+)
+
 //MPPT parameters
+
+func (s *PowerStation) SetBuzzerSilentMode(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
+	params := getParamsEnabled(enabled)
+	return s.setParameter(ctx, "quietMode", PowerStationModuleTypeMppt, params)
+}
 
 func (s *PowerStation) SetCarChargerSwitch(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
 	params := getParamsEnabled(enabled)
 	return s.setParameter(ctx, "mpptCar", PowerStationModuleTypeMppt, params)
 }
 
-func (s *PowerStation) SetBuzzerSilentMode(ctx context.Context, enabled SettingSwitcher) (*CmdSetResponse, error) {
-	params := getParamsEnabled(enabled)
-	return s.setParameter(ctx, "quietMode", PowerStationModuleTypeMppt, params)
+// SetAcEnabled Set AC discharge ("enabled" and X-Boost switch settings)
+// AC discharging settings(enabled: AC switch, 0: off, 1: on; xboost: X-Boost switch, 0: off, 1: on; out_voltage: output voltage, read-only; out_freq: output frequency, 1: 50 Hz, 2: 60 Hz, other values are invalid)
+// { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":5, "operateType":"acOutCfg", "params":{ "enabled":0, "xboost":0, "out_voltage":30, "out_freq":1 } }
+// outFreq: 1 for 50Hz, 2 for 60Hz (check your grid), outVoltage 220 for Europe, for the USA probably 120
+// It appears that all 4 parameters must be sent, otherwise it doesn't apply the changes
+func (s *PowerStation) SetAcEnabled(ctx context.Context, acEnabled, xBoostEnabled SettingSwitcher, outFreq GridFrequency, outVoltage int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["enabled"] = acEnabled
+	params["xboost"] = xBoostEnabled
+	params["out_freq"] = outFreq
+	params["out_voltage"] = outVoltage
+	return s.setParameter(ctx, "acOutCfg", PowerStationModuleTypeMppt, params)
 }
 
 // SetAcChargingSettings From ecoflow documentation:
@@ -94,6 +113,15 @@ func (s *PowerStation) Set12VDcChargingCurrent(ctx context.Context, chargingCurr
 	return s.setParameter(ctx, "dcChgCfg", PowerStationModuleTypeMppt, params)
 }
 
+// SetPvChargingTypeSettings PV charging type settings(chaType: 0: auto identification, 1: MPPT, 2: adapter, other values are invalid; chaType2: 0: auto identification, 1: MPPT, 2: adapter, other values are invalid)
+// {"id": 123,"version": "1.0","sn": "R351ZFB4HF6L0030","moduleType": 5,"operateType": "chaType","params": {"chaType": 0,"chaType2": 0}}
+func (s *PowerStation) SetPvChargingTypeSettings(ctx context.Context, chargeType1, chargeType2 PowerStationPvChargeType) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["chaType"] = chargeType1
+	params["chaType2"] = chargeType2
+	return s.setParameter(ctx, "chaType", PowerStationModuleTypeMppt, params)
+}
+
 // PD parameters
 
 // SetStandByTime Set standby time(0 for never standby; other values indicate the standby time; in minutes)
@@ -130,8 +158,38 @@ func (s *PowerStation) SetPrioritizePolarCharging(ctx context.Context, enabled S
 	return s.setParameter(ctx, "pvChangePrio", PowerStationModuleTypePd, params)
 }
 
-//TODO: Set energy management(isConfig: energy management, 0: disabled, 1: enabled; bpPowerSoc: backup reserve level; minDsgSoc: discharge limit (not in use);minChgSoc: charge limit (not in use))
-//TODO: Set AC always on (acAutoOutConfig: 0: disabled; 1: enabled;minAcOutSoc: minimum SoC for turning on "AC always on" )
+// SetEnergyManagement Set energy management(isConfig: energy management, 0: disabled, 1: enabled; bpPowerSoc: backup reserve level; minDsgSoc: discharge limit (not in use);minChgSoc: charge limit (not in use))
+// Energy statistics(isConfig: energy management, 0: enabled, 1: disabled; bpPowerSoc: backup reserve level; minDsgSoc: lower limit when discharging (not in use); minChgSoc: upper limit when charging (not in use))
+// { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":1, "operateType":"watthConfig", "params":{ "isConfig":1, "bpPowerSoc":95, "minDsgSoc":40, "minChgSoc":95 } }
+func (s *PowerStation) SetEnergyManagement(ctx context.Context, enabled SettingSwitcher, bpPowerSoc, minDsgSoc, minChgSoc int) (*CmdSetResponse, error) {
+	if bpPowerSoc < 0 || bpPowerSoc > 100 {
+		return nil, errors.New("bpPowerSoc out of range. Valid range 0:100")
+	}
+	if minDsgSoc < 0 || minDsgSoc > 100 {
+		return nil, errors.New("minDsgSoc out of range. Valid range 0:100")
+	}
+	if minChgSoc < 0 || minChgSoc > 100 {
+		return nil, errors.New("minChgSoc out of range. Valid range 0:100")
+	}
+	params := make(map[string]interface{})
+	params["isConfig"] = enabled
+	params["bpPowerSoc"] = bpPowerSoc
+	params["minDsgSoc"] = minDsgSoc
+	params["minChgSoc"] = minChgSoc
+	return s.setParameter(ctx, "watthConfig", PowerStationModuleTypePd, params)
+}
+
+// SetAcAlwaysOn Set AC always on (acAutoOutConfig: 0: disabled; 1: enabled;minAcOutSoc: minimum SoC for turning on "AC always on" )
+// { "id":123456789, "version":"1.0", "sn":"R331ZEB4ZEAL0528", "moduleType":1, "operateType":"acAutoOutConfig", "params":{ "acAutoOutConfig":0, "minAcOutSoc":20 } }
+func (s *PowerStation) SetAcAlwaysOn(ctx context.Context, enabled SettingSwitcher, minAcOutSoc int) (*CmdSetResponse, error) {
+	if minAcOutSoc < 0 || minAcOutSoc > 100 {
+		return nil, errors.New("minAcOutSoc out of range. Valid range 0:100")
+	}
+	params := make(map[string]interface{})
+	params["acAutoOutConfig"] = enabled
+	params["minAcOutSoc"] = minAcOutSoc
+	return s.setParameter(ctx, "acAutoOutConfig", PowerStationModuleTypePd, params)
+}
 
 //BMS parameters
 
