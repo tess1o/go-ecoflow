@@ -65,6 +65,20 @@ func (c *Client) GetPowerStation(sn string) *PowerStation {
 	}
 }
 
+func (c *Client) GetPowerStationPro(sn string) *PowerStationPro {
+	return &PowerStationPro{
+		c:  c,
+		sn: sn,
+	}
+}
+
+func (c *Client) GetPowerStreamMicroInverter(sn string) *PowerStreamMicroInverter {
+	return &PowerStreamMicroInverter{
+		c:  c,
+		sn: sn,
+	}
+}
+
 func (c *Client) GetSmartPlug(sn string) *SmartPlug {
 	return &SmartPlug{
 		c:  c,
