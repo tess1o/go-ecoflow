@@ -95,7 +95,7 @@ func (c *Client) GetDeviceList(ctx context.Context) (*DeviceListResponse, error)
 	}
 	var deviceResponse DeviceListResponse
 
-	slog.Debug("GetDeviceList", string(response))
+	slog.Debug("GetDeviceList", "response", string(response))
 
 	err = json.Unmarshal(response, &deviceResponse)
 	if err != nil {
