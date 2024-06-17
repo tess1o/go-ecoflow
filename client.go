@@ -79,6 +79,13 @@ func (c *Client) GetPowerStreamMicroInverter(sn string) *PowerStreamMicroInverte
 	}
 }
 
+func (c *Client) GetSmartHomePanel(sn string) *SmartHomePanel {
+	return &SmartHomePanel{
+		c:  c,
+		sn: sn,
+	}
+}
+
 func (c *Client) GetSmartPlug(sn string) *SmartPlug {
 	return &SmartPlug{
 		c:  c,

@@ -1,4 +1,4 @@
-# ecoflow API implementation via REST API in Go
+# Ecoflow API implementation via REST API in Go
 
 ## Caution
 
@@ -12,9 +12,11 @@ The Ecoflow documentation is not complete and sometimes hard to understand, thus
 
 ## Supported devices:
 
-1. Power Stations (regular, Delta 2, River 2, etc)
+1. Power Stations (regular ecoflow power stations, like Delta 2, River 2, etc)
 2. Power Stations (PRO)
-   3Smart Plug
+3. Smart Plug
+4. PowerStream Micro Inverter
+5. Smart Home Panel
 
 ## Features
 
@@ -117,8 +119,6 @@ func main() {
 
 I don't have those devices, however I will try to implement the APIs
 
-1. Set API for Smart Home Panel
-2. Set API for PowerStream Micro-inverter
-3. Set API for WAVE Air Conditioner
-4. Set API for GLACIER
-5. Set API for Power Kits
+1. Set API for WAVE Air Conditioner
+2. Set API for GLACIER
+3. Set API for Power Kits
