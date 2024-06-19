@@ -124,6 +124,14 @@ func (c *Client) GetGlacier(sn string) *Glacier {
 	}
 }
 
+func (c *Client) GetPowerKit(sn string, moduleSn string) *PowerKit {
+	return &PowerKit{
+		c:        c,
+		sn:       sn,
+		moduleSn: moduleSn,
+	}
+}
+
 type SettingSwitcher int
 
 const (
