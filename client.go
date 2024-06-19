@@ -34,6 +34,13 @@ const (
 	ModuleTypeMppt     ModuleType = 5
 )
 
+type TemperatureUnit int
+
+const (
+	TemperatureUnitCelsius    TemperatureUnit = 0
+	TemperatureUnitFahrenheit TemperatureUnit = 1
+)
+
 type Client struct {
 	httpClient  *http.Client //can be customized if required
 	accessToken string
@@ -105,6 +112,13 @@ func (c *Client) GetSmartPlug(sn string) *SmartPlug {
 
 func (c *Client) GetWaveAirConditioner(sn string) *WaveAirConditioner {
 	return &WaveAirConditioner{
+		c:  c,
+		sn: sn,
+	}
+}
+
+func (c *Client) GetGlacier(sn string) *Glacier {
+	return &Glacier{
 		c:  c,
 		sn: sn,
 	}

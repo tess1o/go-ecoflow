@@ -30,13 +30,6 @@ const (
 	ConditionerSubModeManual ConditionerSubMode = 3
 )
 
-type ConditionerTemperatureUnit int
-
-const (
-	ConditionerTemperatureUnitCelsius    ConditionerTemperatureUnit = 0
-	ConditionerTemperatureUnitFahrenheit ConditionerTemperatureUnit = 1
-)
-
 type ConditionerTemperatureDisplayMode int
 
 const (
@@ -90,7 +83,7 @@ func (c *WaveAirConditioner) SetSubMode(ctx context.Context, subMode Conditioner
 
 // SetTemperatureUnit Set unit of temperature(0: Celsius, 1: Fahrenheit)
 // { "id":123456789, "version":"1.0", "sn":"KT21ZCH2ZF170012", "operateType":"tempSys", "params":{ "mode":1 } }
-func (c *WaveAirConditioner) SetTemperatureUnit(ctx context.Context, mode ConditionerSubMode) (*CmdSetResponse, error) {
+func (c *WaveAirConditioner) SetTemperatureUnit(ctx context.Context, mode TemperatureUnit) (*CmdSetResponse, error) {
 	params := make(map[string]interface{})
 	params["mode"] = mode
 	return c.setParameter(ctx, "tempSys", -1, params)
