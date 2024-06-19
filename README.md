@@ -5,6 +5,10 @@ devices parameters and set devices settings. \
 The library was tested on Ecoflow Delta 2 and Ecoflow River 2 (I don't have other their products)\
 The Ecoflow documentation is not complete and sometimes hard to understand, thus some APIs might not work as expected
 
+## Installation
+To get the library just use `go get` command:
+`go get github.com/tess1o/go-ecoflow`
+
 ## Supported devices:
 1. Power Stations (regular ecoflow power stations, like Delta 2, River 2, etc)
 2. Power Stations (PRO)
