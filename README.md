@@ -18,6 +18,7 @@ The Ecoflow documentation is not complete and sometimes hard to understand, thus
 4. PowerStream Micro Inverter
 5. Smart Home Panel
 6. Wave Air Conditioner
+7. Glacier
 
 ## Features
 
@@ -118,7 +119,4 @@ func main() {
 
 ## ToDo
 
-I don't have those devices, however I will try to implement the APIs
-
-1. Set API for GLACIER
-2. Set API for Power Kits
+1. API for Power Kits
