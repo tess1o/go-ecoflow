@@ -35,6 +35,7 @@ type PowerKitModuleType int
 //15367: LD_AC
 //15368: LD_DC
 //15370: Wireless
+//6402: GEN (smart generator)
 
 const (
 	PowerKitModuleTypeBbcIn        PowerKitModuleType = 15362
@@ -44,6 +45,7 @@ const (
 	PowerKitModuleTypeLdAc         PowerKitModuleType = 15367
 	PowerKitModuleTypeLdDc         PowerKitModuleType = 15368
 	PowerKitModuleTypeWireless     PowerKitModuleType = 15370
+	PowerKitModuleTypeGenerator    PowerKitModuleType = 6402
 )
 
 type PowerKitDcVoltage int
@@ -60,7 +62,7 @@ const (
 func (k *PowerKit) SetDcOutputVoltage(ctx context.Context, voltage PowerKitDcVoltage) (*CmdSetResponse, error) {
 	params := make(map[string]interface{})
 	params["volTag"] = voltage
-	return k.setParameter(ctx, "quietMode", PowerKitModuleTypeBbcIn, params)
+	return k.setParameter(ctx, "dischgParaSet", PowerKitModuleTypeBbcIn, params)
 }
 
 // SetChargingSettings Charging settings
@@ -127,13 +129,126 @@ func (k *PowerKit) SetAcInputCurrent(ctx context.Context, acCurrMaxSet int) (*Cm
 // SetGridPowerInPriority Grid power in priority (passByModeEn, 1: on, 2: off)
 // { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "M109ZEB4ZE7B0963", "moduleType": 15365, "operateType": "dsgIcParaSet",
 // "params": { "dsgLowPwrEn": 255, "pfcDsgModeEn": 255, "passByCurrMax": 255, "passByModeEn": 1 } }
-func (k *PowerKit) SetGridPowerInPriority(ctx context.Context, dsgLowPwrEn, pfcDsgModeEn, passByCurrMax int, passByModeEn SettingSwitcher) (*CmdSetResponse, error) {
+func (k *PowerKit) SetGridPowerInPriority(ctx context.Context, dsgLowPwrEn, pfcDsgModeEn, passByCurrMax, passByModeEn int) (*CmdSetResponse, error) {
 	params := make(map[string]interface{})
 	params["dsgLowPwrEn"] = dsgLowPwrEn
 	params["pfcDsgModeEn"] = pfcDsgModeEn
 	params["passByCurrMax"] = passByCurrMax
 	params["passByModeEn"] = passByModeEn
 	return k.setParameter(ctx, "dsgIcParaSet", PowerKitModuleTypeIcLow, params)
+}
+
+//BP5000/BP2000
+
+// SetChargingUpperLimit Upper limit of charging (range: 50–100)
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "socUpperLimit", "params": { "maxChgSoc": 80 } }
+func (k *PowerKit) SetChargingUpperLimit(ctx context.Context, maxChgSoc int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["maxChgSoc"] = maxChgSoc
+	return k.setParameter(ctx, "socUpperLimit", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetDischargingLowerLimit Lower limit of discharging (range: 0–50)
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "socLowerLimit", "params": { "minDsgSoc": 40 } }
+func (k *PowerKit) SetDischargingLowerLimit(ctx context.Context, minDsgSoc int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["minDsgSoc"] = minDsgSoc
+	return k.setParameter(ctx, "socLowerLimit", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetScreenStandByTime Setting screen standby time(Unit: seconds. 0: never off)
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "lcdStandbyMin", "params": { "minute": 300 } }
+func (k *PowerKit) SetScreenStandByTime(ctx context.Context, standByTimeMinutes int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["minute"] = standByTimeMinutes
+	return k.setParameter(ctx, "lcdStandbyMin", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetBpOff BP off
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "powerOff", "params": { "enable": 1 } }
+func (k *PowerKit) SetBpOff(ctx context.Context, enable SettingSwitcher) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["enable"] = enable
+	return k.setParameter(ctx, "powerOff", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetHeatingByDischarging Setting heating by discharging (0: off, other values: on)
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "ptcDsgCale", "params": { "enable": 1 } }
+func (k *PowerKit) SetHeatingByDischarging(ctx context.Context, enable SettingSwitcher) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["enable"] = enable
+	return k.setParameter(ctx, "ptcDsgCale", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetClearingChargingErrors Clearing charging errors (0: off, 1: on)
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "clearError", "params": { "enable": 0 } }
+func (k *PowerKit) SetClearingChargingErrors(ctx context.Context, clear SettingSwitcher) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["enable"] = clear
+	return k.setParameter(ctx, "clearError", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetLowerLimitForStartupGenerator Lower limit for startup of smart generator
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "oilStartDownLimit", "params": { "soc": 60 } }
+func (k *PowerKit) SetLowerLimitForStartupGenerator(ctx context.Context, soc int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["soc"] = soc
+	return k.setParameter(ctx, "oilStartDownLimit", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// SetUpperLimitForStartupGenerator Upper limit for startup of smart generator
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "0000000000000000", "moduleType": 0, "operateType": "oilStopUpLimit", "params": { "soc": 20 } }
+func (k *PowerKit) SetUpperLimitForStartupGenerator(ctx context.Context, soc int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["soc"] = soc
+	return k.setParameter(ctx, "oilStopUpLimit", PowerKitModuleTypeBp5000Bp2000, params)
+}
+
+// LD_DC
+
+// SetSixWayChannelRelayStatus Setting the status of the 6-way channel relay
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "M106ZAB4Z000001F", "moduleType": 15362, "operateType": "chSwitch", "params": { "bitsSwSta": 0 } }
+func (k *PowerKit) SetSixWayChannelRelayStatus(ctx context.Context, bitsSwSta SettingSwitcher) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["bitsSwSta"] = bitsSwSta
+	return k.setParameter(ctx, "chSwitch", PowerKitModuleTypeLdDc, params)
+}
+
+// Wireless
+
+// SetProductName Setting the product name
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "M106ZAB4Z000001F", "moduleType": 15370, "operateType": "writeProName", "params": { "nameLen": 10, "name": "test" } }
+func (k *PowerKit) SetProductName(ctx context.Context, nameLen int, name string) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["nameLen"] = nameLen
+	params["name"] = name
+	return k.setParameter(ctx, "writeProName", PowerKitModuleTypeWireless, params)
+}
+
+// SetScenarios Setting scenarios
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "M106ZAB4Z000001F", "moduleType": 15370, "operateType": "setScenes", "params": { "scenes": 3 } }
+func (k *PowerKit) SetScenarios(ctx context.Context, scenes int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["scenes"] = scenes
+	return k.setParameter(ctx, "setScenes", PowerKitModuleTypeWireless, params)
+}
+
+// SetTriggeringComprehensiveDataReport SetScenarios Triggering comprehensive data report
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "M106ZAB4Z000001F", "moduleType": 15370, "operateType": "fullIotDataPush", "params": { "times": 1 } }
+func (k *PowerKit) SetTriggeringComprehensiveDataReport(ctx context.Context, times int) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["times"] = times
+	return k.setParameter(ctx, "fullIotDataPush", PowerKitModuleTypeWireless, params)
+}
+
+// GEN (smart generator)
+
+// SetOilPocketStart Oil pocket start/stop instruction (0: off, 1: on)
+// { "id": 123456789, "version": "1.0", "sn": "M106ZAB4Z000001F", "moduleSn": "M106ZAB4Z000001F", "moduleType": 6402, "operateType": "powerOffGen", "params": { "bitsSwSta": 0 } }
+func (k *PowerKit) SetOilPocketStart(ctx context.Context, bitsSwSta SettingSwitcher) (*CmdSetResponse, error) {
+	params := make(map[string]interface{})
+	params["bitsSwSta"] = bitsSwSta
+	return k.setParameter(ctx, "powerOffGen", PowerKitModuleTypeGenerator, params)
 }
 
 func (k *PowerKit) GetParameter(ctx context.Context, params []string) (*GetCmdResponse, error) {
