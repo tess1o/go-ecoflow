@@ -1,26 +1,44 @@
-# Ecoflow API implementation via REST API in Go
+# Ecoflow API client via REST API or MQTT
 
-Ecoflow Rest API implementation in Go (no external dependencies) that allows to get list of linked devices, get all
-devices parameters and set devices settings. \
-The library was tested on Ecoflow Delta 2 and Ecoflow River 2 (I don't have other their products)\
-The Ecoflow documentation is not complete and sometimes hard to understand, thus some APIs might not work as expected
+This is an Ecoflow API client that allows you to get parameters from your `Ecoflow devices` either
+from `Ecoflow Rest API` (requires developer's `access token` and `secret token`) or from `MQTT` (requires user's `email`
+and `password`, the same as in Ecoflow mobile app).
+
+The client implemented via `Ecoflow Rest API` has much more functionality:
+
+1. You can get a specific parameter from your Ecoflow device
+2. You can get all current parameters from your Ecoflow device
+3. You can change parameters for your Ecoflow device
+4. You can list all linked Ecoflow Devices
+
+The MQTT version on the other hand allows to subscribe for the device's parameters changes.
+
+Important notice is that MQTT version requires only user's `email/password`, but using the client implemented
+via `Ecoflow Rest API` requires `Access Token` and `Secret Token` which you'll need to receive from `Ecoflow` (there is
+an instruction below).
+
+The library was tested on Ecoflow Delta 2 and Ecoflow River 2.
 
 ## Installation
-To get the library just use `go get` command:
-`go get github.com/tess1o/go-ecoflow`
 
-## Supported devices:
+To get the library just use `go get` command: `go get github.com/tess1o/go-ecoflow`
+
+## Supported devices
+
+Here is the list of devices for which the complete api (get and set device parameters) using Ecoflow REST API is
+implemented:
+
 1. Power Stations (regular ecoflow power stations, like Delta 2, River 2, etc)
-2. Power Stations (PRO)
+2. Power Stations (PRO versions)
 3. Smart Plug
 4. PowerStream Micro Inverter
 5. Smart Home Panel
 6. Wave Air Conditioner
 7. Glacier
 
-## Features
+## Features via Ecoflow Rest API
 
-The library allows to:
+This is the list of features implemented using Ecoflow Rest API:
 
 1. Get list of all linked devices
 2. Get specified parameters from a device
@@ -29,11 +47,19 @@ The library allows to:
 
 Basically that's all documented features the Ecoflow REST API provides
 
+## Features via MQTT
+
+Currently only getting device's parameters via MQTT is implemented. Please note you have to know device's serial number
+in order to use MQTT api.
+
 ## Documentation
 
 Link to official documentation: https://developer-eu.ecoflow.com/us/document/introduction
 
 ## How to get Access Token and Secret Token
+
+This is required if you would like to use REST API. For MQTT only user's email address and password is required.\
+You can skip this section if you want to use MQTT.
 
 1. Go to https://developer-eu.ecoflow.com/
 2. Click on "Become a Developer"
@@ -42,9 +68,77 @@ Link to official documentation: https://developer-eu.ecoflow.com/us/document/int
 5. Receive email with subject "Approval notice from EcoFlow Developer Platform". May take some time
 6. Go to https://developer-eu.ecoflow.com/us/security and create new AccessKey and SecretKey
 
-## Usage example
+## Usage example - MQTT
 
-Usage example. See more details for each device below in the README.
+```go
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/tess1o/go-ecoflow"
+	"log"
+	"time"
+)
+
+func main() {
+	var deviceSn = "Ecoflow device serial number "
+
+	mqttClientConfig := ecoflow.MqttClientConfiguration{
+		Email:            "ecoflow_email_address",
+		Password:         "ecoflow_password",
+		OnConnect:        connectHandler,     //can be nil
+		OnConnectionLost: connectLostHandler, // can be nil
+		OnReconnect:      nil,                //can be nil
+	}
+
+	//an error can be returned if wrong login/password is provided, ecoflow api is not available, network issue, etc
+	client, err := ecoflow.NewMqttClient(context.Background(), mqttClientConfig)
+	if err != nil {
+		log.Fatalf("Unable to create mqtt client: %+v\n", err)
+	}
+
+	//connect to MQTT broker and subscribe to the device's topic where its parameters are published
+	// It's not described in documentation, 
+	// however looks like it sends to the topic only parameters that are changed, not all list of current values
+	err = client.SubscribeForParameters(deviceSn, messagePubHandler)
+	if err != nil {
+		log.Fatalf("Unable to subscribe: %+v\n", err)
+	}
+	// keep receiving parameters for 1 hour
+	time.Sleep(1 * time.Hour)
+}
+
+// handle payload - device's parameters
+var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	var params ecoflow.MqttDeviceParams
+	err := json.Unmarshal(msg.Payload(), &params)
+	if err != nil {
+		fmt.Printf("Unable to parse message %s from topic %s due to error: %+v\n", msg.Payload(), msg.Topic(), err)
+	} else {
+		fmt.Printf("Received message: %+v from topic: %s\n", params, msg.Topic())
+	}
+}
+
+//executes when we're successfully connected to the mqtt broker
+var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
+	optionsReader := client.OptionsReader()
+	fmt.Printf("Connected to the broker: %s\n", optionsReader.Servers()[0].String())
+}
+
+// executes when the mqtt connection is lost
+var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
+	fmt.Printf("Connect lost: %v", err)
+}
+
+```
+
+## Usage example - REST API
+
+This is an example how to use this library via Ecoflow Rest API. It requires Access Token and Secret Token which you can
+receive from Ecoflow.
 
 ```go
 package main
@@ -105,14 +199,16 @@ func main() {
 
 ```
 
-## Library API description
+## Rest API detailed description
 
-Each function has documentation taken from the Ecoflow website. I don't have more information about the API.
+Here you can find details how to use the library via Ecoflow REST API and the list of all functions supported for all
+devices.
 
 ### Client
 
 `ecoflow.Client` must be created using the `accessToken` and `secretToken`.
-It provides function to get all linked devices and generic functions to get all parameters for any Ecoflow device or set parameters for any
+It provides function to get all linked devices and generic functions to get all parameters for any Ecoflow device or set
+parameters for any
 Device. It can be useful if a new devices is introduced and not supported by this library or new APIs are introduced and
 not implemented by the library. Usually you don't need to use `client.GetDeviceAllParameters` or `client.SetParameters`,
 it's implemented in each device type.\
