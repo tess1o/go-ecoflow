@@ -103,6 +103,12 @@ func main() {
 	//connect to MQTT broker and subscribe to the device's topic where its parameters are published
 	// It's not described in documentation, 
 	// however looks like it sends to the topic only parameters that are changed, not all list of current values
+
+	err = client.Connect()
+	if err != nil {
+		log.Fatalf("Unable to connect to the broker: %+v\n", err)
+	}
+	
 	err = client.SubscribeForParameters(deviceSn, messagePubHandler)
 	if err != nil {
 		log.Fatalf("Unable to subscribe: %+v\n", err)

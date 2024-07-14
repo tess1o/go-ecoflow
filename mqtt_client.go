@@ -162,6 +162,7 @@ func getLoginResponse(ctx context.Context, email string, password string) (*Mqtt
 	return mqttLoginResponse, nil
 }
 
+// Connect to the broker
 func (m *MqttClient) Connect() error {
 	if token := m.Client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
@@ -170,6 +171,7 @@ func (m *MqttClient) Connect() error {
 }
 
 // SubscribeForParameters Subscribe to topic to get all device parameters
+// The client must be connected to the broker before subscribing to the topic
 func (m *MqttClient) SubscribeForParameters(deviceSn string, callback mqtt.MessageHandler) error {
 	topicParams := fmt.Sprintf("/app/device/property/%s", deviceSn)
 	return m.SubscribeToTopics([]string{topicParams}, callback)
