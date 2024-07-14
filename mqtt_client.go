@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"io"
 	"net/http"
+	"time"
 )
 
 const (
@@ -20,11 +21,12 @@ const (
 )
 
 type MqttClientConfiguration struct {
-	Email            string
-	Password         string
-	OnConnect        mqtt.OnConnectHandler
-	OnConnectionLost mqtt.ConnectionLostHandler
-	OnReconnect      mqtt.ReconnectHandler
+	Email                string
+	Password             string
+	OnConnect            mqtt.OnConnectHandler
+	OnConnectionLost     mqtt.ConnectionLostHandler
+	OnReconnect          mqtt.ReconnectHandler
+	MaxReconnectInterval time.Duration
 }
 
 type MqttClient struct {
@@ -59,6 +61,10 @@ func NewMqttClient(ctx context.Context, config MqttClientConfiguration) (*MqttCl
 	}
 	if config.OnReconnect != nil {
 		opts.OnReconnecting = config.OnReconnect
+	}
+	//default value is 10 minutes
+	if config.MaxReconnectInterval != 0 {
+		opts.MaxReconnectInterval = config.MaxReconnectInterval
 	}
 	return &MqttClient{Client: mqtt.NewClient(opts), connectionConfig: c}, nil
 }
