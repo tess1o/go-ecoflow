@@ -28,13 +28,13 @@ type MqttClientConfiguration struct {
 }
 
 type MqttClient struct {
-	client           mqtt.Client
+	Client           mqtt.Client
 	connectionConfig *MqttConnectionConfig
 }
 
 // NewMqttClient creates a new MQTT client using email and password
 // The client is created with the given onConnect, onConnectLost, and messageHandler functions.
-// onConnect is executed when we connect to the MQTT broker
+// onConnect is executed when we connect to the MQTT broker, in this handler we should subscribe to the topics
 // onConnectLost is executed when we are disconnected from MQTT broken
 // ClientID is always should be "ANDROID_%uuid%_%user_id%
 func NewMqttClient(ctx context.Context, config MqttClientConfiguration) (*MqttClient, error) {
@@ -50,6 +50,7 @@ func NewMqttClient(ctx context.Context, config MqttClientConfiguration) (*MqttCl
 	opts.SetClientID(fmt.Sprintf("ANDROID_%s_%s", uuid.New(), c.UserId))
 	opts.SetUsername(c.CertificateAccount)
 	opts.SetPassword(c.CertificatePassword)
+	opts.SetConnectRetry(true)
 	if config.OnConnect != nil {
 		opts.OnConnect = config.OnConnect
 	}
@@ -59,7 +60,7 @@ func NewMqttClient(ctx context.Context, config MqttClientConfiguration) (*MqttCl
 	if config.OnReconnect != nil {
 		opts.OnReconnecting = config.OnReconnect
 	}
-	return &MqttClient{client: mqtt.NewClient(opts), connectionConfig: c}, nil
+	return &MqttClient{Client: mqtt.NewClient(opts), connectionConfig: c}, nil
 }
 
 // GetMqttCredentials get the MQTT credentials using email and password (the same as you use to log in to your Ecoflow app).
@@ -155,6 +156,13 @@ func getLoginResponse(ctx context.Context, email string, password string) (*Mqtt
 	return mqttLoginResponse, nil
 }
 
+func (m *MqttClient) Connect() error {
+	if token := m.Client.Connect(); token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
 // SubscribeForParameters Subscribe to topic to get all device parameters
 func (m *MqttClient) SubscribeForParameters(deviceSn string, callback mqtt.MessageHandler) error {
 	topicParams := fmt.Sprintf("/app/device/property/%s", deviceSn)
@@ -162,18 +170,15 @@ func (m *MqttClient) SubscribeForParameters(deviceSn string, callback mqtt.Messa
 }
 
 // SubscribeToTopics Subscribe to topics
+// Assuming that the MQTT client is already connected to the broker
 func (m *MqttClient) SubscribeToTopics(topics []string, callback mqtt.MessageHandler) error {
-	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
-	}
-
 	topicsMap := make(map[string]byte, len(topics))
 
 	for _, t := range topics {
 		topicsMap[t] = 1
 	}
 
-	token := m.client.SubscribeMultiple(topicsMap, callback)
+	token := m.Client.SubscribeMultiple(topicsMap, callback)
 	token.Wait()
 	return nil
 }
