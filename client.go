@@ -277,7 +277,7 @@ func (c *Client) GetDeviceParameters(ctx context.Context, deviceSN string, param
 	}
 
 	if getCmdResponse.Code != "0" {
-		return getCmdResponse, errors.New(fmt.Sprintf("can't get parameters, error code %s", getCmdResponse.Code))
+		return getCmdResponse, errors.New(fmt.Sprintf("can't get parameters, error code %s: %s", getCmdResponse.Code, getCmdResponse.Message))
 	}
 
 	return getCmdResponse, nil
